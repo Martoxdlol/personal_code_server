@@ -18,7 +18,7 @@ FROM debian:trixie-slim
 # ---------------------------------------------------------------------------
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates curl wget git gnupg unzip zip xz-utils xclip \
+        ca-certificates curl wget git gnupg unzip zip xz-utils xclip ripgrep \
         build-essential gdb valgrind clang cmake ninja-build \
         clang-format clang-tidy clangd lldb lld \
         gcc g++ make pkg-config ccache autoconf automake libtool \
