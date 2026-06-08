@@ -1,13 +1,13 @@
 # devbox
 
 A self-contained development box in a single Docker image: **code-server**
-(VS Code in the browser) on a **PHP 8.4** base, plus a **shared, system-wide
-polyglot toolchain** — Node.js, Python, Bun, Go, Rust, Java (JDK 17) and
+(VS Code in the browser) on a **Debian** base, plus a **shared, system-wide
+polyglot toolchain** — Node.js, Python, Bun, Go, Rust, Java (JDK) and
 **Flutter** (which bundles its own Dart) — all at their latest versions.
 Android development is supported via Google's `android` CLI.
 
-The code-server terminal and the PHP CLI use the **same** binaries: every
-toolchain is installed to system paths and exported on `PATH`. code-server runs
+Every toolchain is installed to system paths and exported on `PATH`, so the
+same binaries are reachable from the code-server terminal. code-server runs
 under `supervisord`.
 
 Based on the reference image:
@@ -17,7 +17,7 @@ Based on the reference image:
 
 | File                 | Purpose                                                        |
 | -------------------- | -------------------------------------------------------------- |
-| `Dockerfile`         | Builds PHP + code-server + the polyglot toolchain              |
+| `Dockerfile`         | Builds code-server + the polyglot toolchain                    |
 | `docker-compose.yml` | Runs the container, mounts `src/` + persists the Android SDK    |
 | `supervisord.conf`   | Runs the `code-server` process                                 |
 | `.env.example`       | Template for the code-server password                          |
@@ -46,8 +46,8 @@ code-server is served over plain **HTTP** (no TLS).
    docker compose up -d --build
    ```
 
-   > The first build is slow — it compiles the PHP extensions and downloads the
-   > full toolchain (Node, Go, Rust, Bun, Flutter, JDK) and the editor extensions.
+   > The first build is slow — it downloads the full toolchain (Node, Go, Rust,
+   > Bun, Flutter, JDK) and the editor extensions.
 
 - Editor: <http://localhost:8081> — log in with `CODE_SERVER_PASSWORD`. It opens
   `/workspace` (the same `src/` folder), so edits show up immediately.
@@ -94,15 +94,12 @@ in the `Dockerfile` and remove the `volumes:` entry from `docker-compose.yml`.
 
 | Tool         | Version source                | Notes                                            |
 | ------------ | ----------------------------- | ------------------------------------------------ |
-| PHP 8.4      | base image (`php:8.4-apache`) | CLI; available on `PATH`                         |
-| Imagick      | PECL (latest)                 | Built against `libmagickwand`                    |
-| GD           | bundled with PHP              | Configured with Freetype/JPEG/PNG/WebP           |
 | Node.js      | NodeSource (Active LTS, v24)  | System-wide; `sharp` installed globally          |
 | Python 3     | Debian apt (latest)           | `python3` + `pip` + `venv`                       |
 | Bun          | official installer (latest)   | `/usr/local/bun`                                 |
 | Go           | go.dev (resolved latest)      | `/usr/local/go`; version fetched live at build   |
 | Rust         | rustup (latest stable)        | `/usr/local/cargo`, world-readable               |
-| Java (JDK 17)| Debian apt (`openjdk-17`)     | Headless; required by Gradle/Android builds      |
+| Java (JDK)   | Debian apt (`default-jdk`)    | Headless; required by Gradle/Android builds      |
 | Flutter      | git `stable` branch (latest)  | `/usr/local/flutter`; bundles its own `dart`     |
 | Android CLI  | Google apt repo (latest)      | `android` tool; SDK provisioned on demand        |
 | C / C++      | Debian apt                    | `build-essential`, `clang`, `cmake`, `ninja`     |

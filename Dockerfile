@@ -1,23 +1,22 @@
-# code-server (VS Code in the browser) on a PHP 8.4 base, bundled with a shared,
-# system-wide polyglot toolchain: Node.js, Python, Bun, Go, Rust, Java (JDK 17),
+# code-server (VS Code in the browser) on a Debian base, bundled with a shared,
+# system-wide polyglot toolchain: Node.js, Python, Bun, Go, Rust, Java (JDK),
 # and Flutter (which bundles its own Dart). Android development is supported via
 # Google's `android` CLI; the Android SDK is pulled on demand (see README) to
 # keep the image lean.
 #
-# The code-server terminal and PHP CLI use the SAME binaries — everything is
-# installed to system paths (/usr/local/*, /usr/lib) and exported on PATH below,
-# and the same PATH is written to /etc/profile.d so interactive editor terminals
-# inherit it too.
+# Everything is installed to system paths (/usr/local/*, /usr/lib) and exported
+# on PATH below, and the same PATH is written to /etc/profile.d so interactive
+# editor terminals inherit it too.
 #
 # Reference: https://github.com/EscuelaTecnicaHenryFord/code-server-docker
 #
 # Workspace files live in /workspace — code-server's workspace — mounted in at
 # runtime via docker-compose.yml.
 
-FROM php:8.4-apache
+FROM debian:trixie-slim
 
 # ---------------------------------------------------------------------------
-# System packages: C/C++ build toolchain, Python, supervisor, utilities.
+# System packages: C/C++ build toolchain, Python, JDK, supervisor, utilities.
 # ---------------------------------------------------------------------------
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -25,34 +24,21 @@ RUN apt-get update \
         supervisor \
         build-essential gdb valgrind clang cmake ninja-build \
         python3 python3-pip python3-venv \
-        openjdk-17-jdk-headless libglu1-mesa \
+        default-jdk-headless libglu1-mesa \
         apt-transport-https \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
-# PHP extensions: Imagick + GD (with Freetype/JPEG/PNG/WebP support).
-# ---------------------------------------------------------------------------
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        libmagickwand-dev \
-        libfreetype6-dev libjpeg62-turbo-dev libpng-dev libwebp-dev \
-        libonig-dev libxml2-dev libfontconfig1-dev \
-    && pecl install imagick \
-    && docker-php-ext-enable imagick \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
-    && docker-php-ext-install -j"$(nproc)" gd \
-    && rm -rf /var/lib/apt/lists/*
-
-# ---------------------------------------------------------------------------
-# System-wide language toolchains (shared by PHP and code-server).
-# Installed under /usr/local/* and /usr/lib, all exported on PATH.
+# System-wide language toolchains. Installed under /usr/local/* and /usr/lib,
+# all exported on PATH. JAVA_HOME uses Debian's version-agnostic default-java
+# symlink so it tracks whatever JDK `default-jdk-headless` provides.
 # ---------------------------------------------------------------------------
 ENV CARGO_HOME=/usr/local/cargo \
     RUSTUP_HOME=/usr/local/rustup \
     BUN_INSTALL=/usr/local/bun \
     GOROOT=/usr/local/go \
     GOPATH=/usr/local/gopath \
-    JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 \
+    JAVA_HOME=/usr/lib/jvm/default-java \
     FLUTTER_HOME=/usr/local/flutter \
     ANDROID_HOME=/usr/local/android-sdk \
     ANDROID_SDK_ROOT=/usr/local/android-sdk \
@@ -119,8 +105,6 @@ ENV HOME=/root
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
 RUN for ext in \
-        DEVSENSE.phptools-vscode \
-        junstyle.php-cs-fixer \
         ms-python.python \
         ms-vscode.cpptools \
         golang.go \
