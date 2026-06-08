@@ -20,6 +20,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates curl wget git gnupg unzip zip xz-utils xclip \
         build-essential gdb valgrind clang cmake ninja-build \
+        clang-format clang-tidy clangd lldb lld \
+        gcc g++ make pkg-config ccache autoconf automake libtool \
         python3 python3-pip python3-venv \
         default-jdk-headless libglu1-mesa \
         apt-transport-https \
