@@ -55,6 +55,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && rm -rf /var/lib/apt/lists/* \
     && npm install -g sharp
 
+# AI coding CLIs, installed system-wide via npm: Claude Code (Anthropic) and
+# Codex (OpenAI). Both land on PATH as `claude` and `codex`.
+RUN npm install -g @anthropic-ai/claude-code @openai/codex
+
 # Bun (latest) into BUN_INSTALL, made readable/executable for all users.
 RUN curl -fsSL https://bun.sh/install | bash \
     && chmod -R a+rX /usr/local/bun
