@@ -1,0 +1,28 @@
+services:
+  devbox:
+    build:
+      context: .
+    container_name: devbox
+    environment:
+      # Password for the code-server web UI. Compose reads it from the .env
+      # file in this directory; the `:?` makes it required (fails fast if unset).
+      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:?set CODE_SERVER_PASSWORD in .env}
+    ports:
+      - "8081:8081" # code-server (VS Code web UI, HTTP)
+    volumes:
+      # Live mount of the workspace files. This is the folder code-server opens
+      # as its workspace.
+      - ./src:/var/www/html
+      # Persist code-server user data: extensions, settings, editor state and
+      # recents. A named volume (not a bind mount) is used so the extensions
+      # baked into the image at build time are seeded into the volume on first
+      # run; a bind mount would shadow them and start empty.
+      - devbox-code-server:/root/.local/share/code-server
+      # Persist the Android SDK installed on demand via `android sdk install`,
+      # so it survives container recreation and isn't re-downloaded each time.
+      - devbox-android-sdk:/usr/local/android-sdk
+    restart: always
+
+volumes:
+  devbox-code-server:
+  devbox-android-sdk:
