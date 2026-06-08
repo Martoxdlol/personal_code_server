@@ -12,7 +12,7 @@ services:
     volumes:
       # Live mount of the workspace files. This is the folder code-server opens
       # as its workspace.
-      - ./src:/var/www/html
+      - ./src:/workspace
       # Persist code-server user data: extensions, settings, editor state and
       # recents. A named volume (not a bind mount) is used so the extensions
       # baked into the image at build time are seeded into the volume on first

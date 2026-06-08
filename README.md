@@ -21,7 +21,7 @@ Based on the reference image:
 | `docker-compose.yml` | Runs the container, mounts `src/` + persists the Android SDK    |
 | `supervisord.conf`   | Runs the `code-server` process                                 |
 | `.env.example`       | Template for the code-server password                          |
-| `src/`               | Your workspace files (`/var/www/html`)                         |
+| `src/`               | Your workspace files (`/workspace`)                            |
 
 ## Ports
 
@@ -50,7 +50,7 @@ code-server is served over plain **HTTP** (no TLS).
    > full toolchain (Node, Go, Rust, Bun, Flutter, JDK) and the editor extensions.
 
 - Editor: <http://localhost:8081> — log in with `CODE_SERVER_PASSWORD`. It opens
-  `/var/www/html` (the same `src/` folder), so edits show up immediately.
+  `/workspace` (the same `src/` folder), so edits show up immediately.
 
 ## Android / Flutter
 
@@ -87,7 +87,7 @@ src/
 └── ...your files...
 ```
 
-To bake files into the image instead (immutable deploys), `COPY src/ /var/www/html/`
+To bake files into the image instead (immutable deploys), `COPY src/ /workspace/`
 in the `Dockerfile` and remove the `volumes:` entry from `docker-compose.yml`.
 
 ## What's installed

@@ -11,8 +11,8 @@
 #
 # Reference: https://github.com/EscuelaTecnicaHenryFord/code-server-docker
 #
-# Workspace files live in /var/www/html — code-server's workspace — mounted in
-# at runtime via docker-compose.yml.
+# Workspace files live in /workspace — code-server's workspace — mounted in at
+# runtime via docker-compose.yml.
 
 FROM php:8.4-apache
 
