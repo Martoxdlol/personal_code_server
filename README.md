@@ -4,7 +4,6 @@ A self-contained development box in a single Docker image: **code-server**
 (VS Code in the browser) on a **Debian** base, plus a **shared, system-wide
 polyglot toolchain** — Node.js, Python, Bun, Go, Rust, Java (JDK) and
 **Flutter** (which bundles its own Dart) — all at their latest versions.
-Android development is supported via Google's `android` CLI.
 
 Every toolchain is installed to system paths and exported on `PATH`, so the
 same binaries are reachable from the code-server terminal. code-server runs
@@ -18,7 +17,7 @@ Based on the reference image:
 | File                 | Purpose                                                        |
 | -------------------- | -------------------------------------------------------------- |
 | `Dockerfile`         | Builds code-server + the polyglot toolchain                    |
-| `docker-compose.yml` | Runs the container, mounts `src/` + persists the Android SDK    |
+| `docker-compose.yml` | Runs the container, mounts `src/` as the workspace             |
 | `supervisord.conf`   | Runs the `code-server` process                                 |
 | `.env.example`       | Template for the code-server password                          |
 | `src/`               | Your workspace files (`/workspace`)                            |
@@ -52,30 +51,12 @@ code-server is served over plain **HTTP** (no TLS).
 - Editor: <http://localhost:8081> — log in with `CODE_SERVER_PASSWORD`. It opens
   `/workspace` (the same `src/` folder), so edits show up immediately.
 
-## Android / Flutter
+## Flutter
 
-To keep the image lean, the **Android SDK is not baked in** — only the `android`
-CLI, the JDK and Flutter are. Provision the SDK once from a terminal (it lands in
-`$ANDROID_HOME` = `/usr/local/android-sdk`, a named volume, so it persists):
-
-```bash
-# Install the components you need (versions are examples — pick current ones)
-android sdk install platform-tools build-tools/36.0.0 platforms/android-36 cmdline-tools/latest
-
-# Accept the SDK licenses (non-interactive)
-yes | flutter doctor --android-licenses
-
-# Verify the toolchain
-flutter doctor
-```
-
-Flutter is wired to this SDK at build time (`flutter config --android-sdk`), and
-`dart`/`flutter` are already on `PATH`. Flutter **web/desktop** builds work out
-of the box; **Android** builds need the one-time provisioning above.
-
-> ⚠️ The **emulator is not included** and generally won't run in a container
-> (it needs `/dev/kvm` / nested virtualization). Building APKs/AABs works fine;
-> run/debug on a physical device or a host-side emulator instead.
+`flutter` and `dart` are on `PATH` out of the box and target **web and desktop**.
+**Android tooling is intentionally not included**: Google's `android` CLI and the
+Android build-tools are amd64-only, so they don't work on this arm64 host. For
+Android builds, use a dedicated amd64 builder/CI instead.
 
 ## Adding your files
 
@@ -99,9 +80,8 @@ in the `Dockerfile` and remove the `volumes:` entry from `docker-compose.yml`.
 | Bun          | official installer (latest)   | `/usr/local/bun`                                 |
 | Go           | go.dev (resolved latest)      | `/usr/local/go`; version fetched live at build   |
 | Rust         | rustup (latest stable)        | `/usr/local/cargo`, world-readable               |
-| Java (JDK)   | Debian apt (`default-jdk`)    | Headless; required by Gradle/Android builds      |
+| Java (JDK)   | Debian apt (`default-jdk`)    | Headless (OpenJDK 21 on trixie)                  |
 | Flutter      | git `stable` branch (latest)  | `/usr/local/flutter`; bundles its own `dart`     |
-| Android CLI  | Google apt repo (latest)      | `android` tool; SDK provisioned on demand        |
 | C / C++      | Debian apt                    | `build-essential`, `clang`, `cmake`, `ninja`     |
 | code-server  | official installer (latest)   | HTTP web UI on 8081, password auth, opens workspace |
 | supervisord  | Debian apt                    | Runs code-server                                 |
@@ -112,9 +92,8 @@ same binaries are reachable everywhere.
 
 ### A note on versions
 
-Go, Bun, Rust, Flutter, the Android CLI and code-server resolve to the latest
-release at build time, so rebuilding picks up newer versions automatically. Node
-uses the **Active LTS** (currently v24) via NodeSource for stability; bump the
+Go, Bun, Rust, Flutter and code-server resolve to the latest release at build
+time, so rebuilding picks up newer versions automatically. Node uses the
+**Active LTS** (currently v24) via NodeSource for stability; bump the
 `setup_NN.x` line in the `Dockerfile` to track a different line (e.g. the Current
-release). Dart now comes bundled with Flutter rather than being installed
-separately.
+release). Dart comes bundled with Flutter rather than being installed separately.

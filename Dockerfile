@@ -1,8 +1,6 @@
 # code-server (VS Code in the browser) on a Debian base, bundled with a shared,
 # system-wide polyglot toolchain: Node.js, Python, Bun, Go, Rust, Java (JDK),
-# and Flutter (which bundles its own Dart). Android development is supported via
-# Google's `android` CLI; the Android SDK is pulled on demand (see README) to
-# keep the image lean.
+# and Flutter (which bundles its own Dart; web/desktop targets).
 #
 # Everything is installed to system paths (/usr/local/*, /usr/lib) and exported
 # on PATH below, and the same PATH is written to /etc/profile.d so interactive
@@ -40,9 +38,7 @@ ENV CARGO_HOME=/usr/local/cargo \
     GOPATH=/usr/local/gopath \
     JAVA_HOME=/usr/lib/jvm/default-java \
     FLUTTER_HOME=/usr/local/flutter \
-    ANDROID_HOME=/usr/local/android-sdk \
-    ANDROID_SDK_ROOT=/usr/local/android-sdk \
-    PATH=/usr/local/go/bin:/usr/local/gopath/bin:/usr/local/cargo/bin:/usr/local/bun/bin:/usr/local/flutter/bin:/usr/local/android-sdk/cmdline-tools/latest/bin:/usr/local/android-sdk/platform-tools:/usr/local/bin:$PATH
+    PATH=/usr/local/go/bin:/usr/local/gopath/bin:/usr/local/cargo/bin:/usr/local/bun/bin:/usr/local/flutter/bin:/usr/local/bin:$PATH
 
 # Node.js (Active LTS) + sharp, installed system-wide via NodeSource.
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
@@ -60,9 +56,12 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     && chmod -R a+rwX /usr/local/cargo /usr/local/rustup
 
 # Go (latest) — resolve the current version from the official endpoint so it
-# stays up to date on rebuild rather than pinning a stale tarball.
+# stays up to date on rebuild rather than pinning a stale tarball. The arch is
+# detected (dpkg's amd64/arm64 names match Go's tarball naming) so it works on
+# both x86_64 and arm64 hosts.
 RUN GO_VERSION="$(curl -fsSL https://go.dev/VERSION?m=text | head -n1)" \
-    && curl -fsSL "https://go.dev/dl/${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tar.gz \
+    && GO_ARCH="$(dpkg --print-architecture)" \
+    && curl -fsSL "https://go.dev/dl/${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -o /tmp/go.tar.gz \
     && tar -C /usr/local -xzf /tmp/go.tar.gz \
     && rm /tmp/go.tar.gz \
     && mkdir -p "$GOPATH"
@@ -72,29 +71,14 @@ RUN GO_VERSION="$(curl -fsSL https://go.dev/VERSION?m=text | head -n1)" \
 # A single `flutter --version` bootstraps the bundled Dart SDK at build time.
 RUN git clone --depth 1 -b stable https://github.com/flutter/flutter.git "$FLUTTER_HOME" \
     && git config --system --add safe.directory "$FLUTTER_HOME" \
-    && "$FLUTTER_HOME/bin/flutter" --suppress-analytics config --android-sdk "$ANDROID_HOME" \
     && "$FLUTTER_HOME/bin/flutter" --suppress-analytics --version \
     && chmod -R a+rwX "$FLUTTER_HOME"
 
-# Android CLI (latest) via Google's apt repository — the agent-centric tool for
-# managing the SDK, projects and devices. The SDK itself is NOT baked in (it is
-# multi-GB); provision it on demand with `android sdk install ...` — it persists
-# in the android-sdk volume. See README. ANDROID_HOME is created as the mount
-# point so Flutter's --android-sdk path resolves.
-RUN wget -qO- https://dl.google.com/linux/linux_signing_key.pub \
-        | gpg --dearmor -o /usr/share/keyrings/google-android.gpg \
-    && echo 'deb [signed-by=/usr/share/keyrings/google-android.gpg arch=amd64] http://dl.google.com/android/cli/latest/debian/ stable main' \
-        > /etc/apt/sources.list.d/android-cli.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends android-cli \
-    && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p "$ANDROID_HOME"
-
 # Make the shared toolchain visible to interactive (login) shells in the
 # code-server terminal, mirroring the ENV PATH above.
-RUN printf 'export CARGO_HOME=%s\nexport RUSTUP_HOME=%s\nexport BUN_INSTALL=%s\nexport GOROOT=%s\nexport GOPATH=%s\nexport JAVA_HOME=%s\nexport FLUTTER_HOME=%s\nexport ANDROID_HOME=%s\nexport ANDROID_SDK_ROOT=%s\nexport PATH=%s\n' \
+RUN printf 'export CARGO_HOME=%s\nexport RUSTUP_HOME=%s\nexport BUN_INSTALL=%s\nexport GOROOT=%s\nexport GOPATH=%s\nexport JAVA_HOME=%s\nexport FLUTTER_HOME=%s\nexport PATH=%s\n' \
         "$CARGO_HOME" "$RUSTUP_HOME" "$BUN_INSTALL" "$GOROOT" "$GOPATH" \
-        "$JAVA_HOME" "$FLUTTER_HOME" "$ANDROID_HOME" "$ANDROID_SDK_ROOT" "$PATH" \
+        "$JAVA_HOME" "$FLUTTER_HOME" "$PATH" \
         > /etc/profile.d/dev-toolchain.sh
 
 # ---------------------------------------------------------------------------
