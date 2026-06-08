@@ -6,8 +6,7 @@ polyglot toolchain** — Node.js, Python, Bun, Go, Rust, Java (JDK) and
 **Flutter** (which bundles its own Dart) — all at their latest versions.
 
 Every toolchain is installed to system paths and exported on `PATH`, so the
-same binaries are reachable from the code-server terminal. code-server runs
-under `supervisord`.
+same binaries are reachable from the code-server terminal.
 
 Based on the reference image:
 <https://github.com/EscuelaTecnicaHenryFord/code-server-docker>
@@ -18,7 +17,6 @@ Based on the reference image:
 | -------------------- | -------------------------------------------------------------- |
 | `Dockerfile`         | Builds code-server + the polyglot toolchain                    |
 | `docker-compose.yml` | Runs the container, mounts `src/` as the workspace             |
-| `supervisord.conf`   | Runs the `code-server` process                                 |
 | `.env.example`       | Template for the code-server password                          |
 | `src/`               | Your workspace files (`/workspace`)                            |
 
@@ -84,9 +82,8 @@ in the `Dockerfile` and remove the `volumes:` entry from `docker-compose.yml`.
 | Flutter      | git `stable` branch (latest)  | `/usr/local/flutter`; bundles its own `dart`     |
 | C / C++      | Debian apt                    | `build-essential`, `clang`, `cmake`, `ninja`     |
 | code-server  | official installer (latest)   | HTTP web UI on 8081, password auth, opens workspace |
-| supervisord  | Debian apt                    | Runs code-server                                 |
 
-The toolchain `PATH` is set both via `ENV` (for the `supervisord` process) and
+The toolchain `PATH` is set both via `ENV` (for the `code-server` process) and
 via `/etc/profile.d/dev-toolchain.sh` (for interactive editor terminals), so the
 same binaries are reachable everywhere.
 

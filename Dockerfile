@@ -14,12 +14,11 @@
 FROM debian:trixie-slim
 
 # ---------------------------------------------------------------------------
-# System packages: C/C++ build toolchain, Python, JDK, supervisor, utilities.
+# System packages: C/C++ build toolchain, Python, JDK, utilities.
 # ---------------------------------------------------------------------------
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates curl wget git gnupg unzip zip xz-utils xclip \
-        supervisor \
         build-essential gdb valgrind clang cmake ninja-build \
         python3 python3-pip python3-venv \
         default-jdk-headless libglu1-mesa \
@@ -100,9 +99,9 @@ RUN for ext in \
         code-server --install-extension "$ext" || true ; \
     done
 
-COPY supervisord.conf /etc/supervisord.conf
-
 # 8081 code-server (VS Code web UI, HTTP)
 EXPOSE 8081
 
-ENTRYPOINT ["supervisord", "-c", "/etc/supervisord.conf"]
+# code-server reads its login password from the PASSWORD env var (passed in at
+# runtime). Opens /workspace as the workspace, served over plain HTTP on 8081.
+CMD ["code-server", "--bind-addr", "0.0.0.0:8081", "--auth", "password", "/workspace"]

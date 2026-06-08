@@ -4,9 +4,10 @@ services:
       context: .
     container_name: devbox
     environment:
-      # Password for the code-server web UI. Compose reads it from the .env
-      # file in this directory; the `:?` makes it required (fails fast if unset).
-      - CODE_SERVER_PASSWORD=${CODE_SERVER_PASSWORD:?set CODE_SERVER_PASSWORD in .env}
+      # Password for the code-server web UI (code-server reads the PASSWORD env
+      # var directly). Compose reads it from the .env file in this directory;
+      # the `:?` makes it required (fails fast if unset).
+      - PASSWORD=${CODE_SERVER_PASSWORD:?set CODE_SERVER_PASSWORD in .env}
     ports:
       - "8081:8081" # code-server (VS Code web UI, HTTP)
     volumes:
