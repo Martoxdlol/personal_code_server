@@ -53,7 +53,7 @@ ENV CARGO_HOME=/usr/local/cargo \
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/* \
-    && npm install -g sharp
+    && npm install -g sharp pnpm
 
 # AI coding CLIs, installed system-wide via npm: Claude Code (Anthropic) and
 # Codex (OpenAI). Both land on PATH as `claude` and `codex`.
