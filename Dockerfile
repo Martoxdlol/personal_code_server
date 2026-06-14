@@ -1,16 +1,3 @@
-# code-server (VS Code in the browser) on a Debian base, bundled with a shared,
-# system-wide polyglot toolchain: Node.js, Python, Bun, Go, Rust, Java (JDK),
-# and Flutter (which bundles its own Dart; web/desktop targets).
-#
-# Everything is installed to system paths (/usr/local/*, /usr/lib) and exported
-# on PATH below, and the same PATH is written to /etc/profile.d so interactive
-# editor terminals inherit it too.
-#
-# Reference: https://github.com/EscuelaTecnicaHenryFord/code-server-docker
-#
-# Workspace files live in /workspace — code-server's workspace — mounted in at
-# runtime via docker-compose.yml.
-
 FROM debian:trixie-slim
 
 # ---------------------------------------------------------------------------
@@ -18,21 +5,26 @@ FROM debian:trixie-slim
 # ---------------------------------------------------------------------------
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates curl wget git gnupg unzip zip xz-utils xclip ripgrep \
-        build-essential gdb valgrind clang cmake ninja-build \
-        clang-format clang-tidy clangd lldb lld \
-        gcc g++ make pkg-config ccache autoconf automake libtool \
-        python3 python3-pip python3-venv \
-        default-jdk-headless libglu1-mesa \
-        apt-transport-https \
+    ca-certificates curl wget git gnupg unzip zip xz-utils xclip ripgrep \
+    build-essential gdb valgrind clang cmake ninja-build \
+    clang-format clang-tidy clangd lldb lld \
+    gcc g++ make pkg-config ccache autoconf automake libtool \
+    python3 python3-dev python3-pip python3-venv python3-wheel \
+    default-jdk-headless libglu1-mesa \
+    apt-transport-https \
+    libopenblas-dev liblapack-dev libhdf5-dev \
+    libffi-dev libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
+    libsqlite3-dev liblzma-dev \
+    ffmpeg libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
+    graphviz \
     && rm -rf /var/lib/apt/lists/*
 
 # GitHub CLI (gh) from GitHub's official apt repository.
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-        -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
+    -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
     && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-        > /etc/apt/sources.list.d/github-cli.list \
+    > /etc/apt/sources.list.d/github-cli.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends gh \
     && rm -rf /var/lib/apt/lists/*
@@ -49,7 +41,8 @@ ENV CARGO_HOME=/usr/local/cargo \
     GOPATH=/usr/local/gopath \
     JAVA_HOME=/usr/lib/jvm/default-java \
     FLUTTER_HOME=/usr/local/flutter \
-    PATH=/usr/local/go/bin:/usr/local/gopath/bin:/usr/local/cargo/bin:/usr/local/bun/bin:/usr/local/flutter/bin:/usr/local/bin:$PATH
+    AI_PYTHON_HOME=/opt/ai-python \
+    PATH=/opt/ai-python/bin:/usr/local/go/bin:/usr/local/gopath/bin:/usr/local/cargo/bin:/usr/local/bun/bin:/usr/local/flutter/bin:/usr/local/bin:$PATH
 
 # Node.js (Active LTS) + sharp, installed system-wide via NodeSource.
 RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
@@ -67,7 +60,7 @@ RUN curl -fsSL https://bun.sh/install | bash \
 
 # Rust (latest stable) via rustup, world-readable so any user can use it.
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-        | sh -s -- -y --no-modify-path --default-toolchain stable \
+    | sh -s -- -y --no-modify-path --default-toolchain stable \
     && chmod -R a+rwX /usr/local/cargo /usr/local/rustup
 
 # Go (latest) — resolve the current version from the official endpoint so it
@@ -89,12 +82,81 @@ RUN git clone --depth 1 -b stable https://github.com/flutter/flutter.git "$FLUTT
     && "$FLUTTER_HOME/bin/flutter" --suppress-analytics --version \
     && chmod -R a+rwX "$FLUTTER_HOME"
 
+# Python AI/ML environment. The venv is system-wide and first on PATH.
+# On amd64, PyTorch is installed with NVIDIA CUDA wheels. Other architectures
+# fall back to the default PyPI wheels.
+RUN python3 -m venv "$AI_PYTHON_HOME" \
+    && python -m pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
+    pip install --no-cache-dir \
+    torch torchvision torchaudio \
+    --index-url https://download.pytorch.org/whl/cu128 ; \
+    else \
+    pip install --no-cache-dir torch torchvision torchaudio ; \
+    fi \
+    && pip install --no-cache-dir \
+    accelerate \
+    anthropic \
+    bitsandbytes \
+    cupy-cuda12x \
+    datasets \
+    diffusers \
+    einops \
+    evaluate \
+    faiss-cpu \
+    gradio \
+    h5py \
+    httpx \
+    huggingface-hub \
+    ipykernel \
+    ipywidgets \
+    jupyterlab \
+    joblib \
+    langchain \
+    langchain-community \
+    lightning \
+    matplotlib \
+    mlflow \
+    numba \
+    numpy \
+    nvidia-ml-py \
+    onnx \
+    onnxruntime-gpu \
+    openai \
+    opencv-python-headless \
+    pandas \
+    peft \
+    pillow \
+    plotly \
+    polars \
+    pyarrow \
+    pydantic \
+    python-dotenv \
+    pyyaml \
+    requests \
+    rich \
+    safetensors \
+    scikit-learn \
+    scipy \
+    seaborn \
+    sentence-transformers \
+    sentencepiece \
+    statsmodels \
+    tensorboard \
+    timm \
+    tokenizers \
+    torchmetrics \
+    tqdm \
+    transformers \
+    wandb \
+    && chmod -R a+rwX "$AI_PYTHON_HOME"
+
 # Make the shared toolchain visible to interactive (login) shells in the
 # code-server terminal, mirroring the ENV PATH above.
-RUN printf 'export CARGO_HOME=%s\nexport RUSTUP_HOME=%s\nexport BUN_INSTALL=%s\nexport GOROOT=%s\nexport GOPATH=%s\nexport JAVA_HOME=%s\nexport FLUTTER_HOME=%s\nexport PATH=%s\n' \
-        "$CARGO_HOME" "$RUSTUP_HOME" "$BUN_INSTALL" "$GOROOT" "$GOPATH" \
-        "$JAVA_HOME" "$FLUTTER_HOME" "$PATH" \
-        > /etc/profile.d/dev-toolchain.sh
+RUN printf 'export CARGO_HOME=%s\nexport RUSTUP_HOME=%s\nexport BUN_INSTALL=%s\nexport GOROOT=%s\nexport GOPATH=%s\nexport JAVA_HOME=%s\nexport FLUTTER_HOME=%s\nexport AI_PYTHON_HOME=%s\nexport PATH=%s\n' \
+    "$CARGO_HOME" "$RUSTUP_HOME" "$BUN_INSTALL" "$GOROOT" "$GOPATH" \
+    "$JAVA_HOME" "$FLUTTER_HOME" "$AI_PYTHON_HOME" "$PATH" \
+    > /etc/profile.d/dev-toolchain.sh
 
 # ---------------------------------------------------------------------------
 # code-server (latest) + editor extensions for the bundled languages.
@@ -104,15 +166,15 @@ ENV HOME=/root
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 
 RUN for ext in \
-        ms-python.python \
-        ms-vscode.cpptools \
-        golang.go \
-        rust-lang.rust-analyzer \
-        Dart-Code.dart-code \
-        Dart-Code.flutter \
-        astro-build.astro-vscode \
-        GitHub.copilot ; do \
-        code-server --install-extension "$ext" || true ; \
+    ms-python.python \
+    ms-vscode.cpptools \
+    golang.go \
+    rust-lang.rust-analyzer \
+    Dart-Code.dart-code \
+    Dart-Code.flutter \
+    astro-build.astro-vscode \
+    GitHub.copilot ; do \
+    code-server --install-extension "$ext" || true ; \
     done
 
 # 8081 code-server (VS Code web UI, HTTP)
