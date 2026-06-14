@@ -1,19 +1,34 @@
-# Optional NVIDIA GPU support.
+# Standalone GPU variant of the stack (NVIDIA).
 #
-# This is a Compose *override* file: it adds nothing on its own and only takes
-# effect when layered on top of docker-compose.yml. The base file stays
-# CPU-only so `docker compose up` keeps working on hosts with no GPU.
+# This is a COMPLETE, self-contained compose file (not an override fragment),
+# so it can be deployed on its own — e.g. Dokploy points its "Compose Path" at
+# this file and runs `docker compose -f docker-compose.gpu.yml up`. Dokploy
+# only reads a single compose file, so the override-layering approach
+# (`-f docker-compose.yml -f docker-compose.gpu.yml`) does not work there.
 #
-# Requires the NVIDIA Container Toolkit on the host (and an NVIDIA driver):
-#   https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+# Locally you can use this the same way: `docker compose -f docker-compose.gpu.yml up -d --build`.
+# For CPU-only local use, keep using the default `docker compose up` (docker-compose.yml).
 #
-# Enable GPU access by layering this file in:
-#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
-#
-# The image already ships CUDA-enabled wheels (PyTorch cu128, cupy, etc.) on
-# amd64, so once the device is reserved here they can see the GPU.
+# Requires the NVIDIA Container Toolkit + driver on the host (and an amd64 host,
+# since the image's CUDA wheels are amd64-only). Verify with `nvidia-smi` on the
+# host before deploying.
 services:
   devbox:
+    build:
+      context: .
+    container_name: devbox
+    environment:
+      # code-server reads PASSWORD directly. In Dokploy, set CODE_SERVER_PASSWORD
+      # in the service's Environment settings; locally it comes from .env.
+      - PASSWORD=${CODE_SERVER_PASSWORD:?set CODE_SERVER_PASSWORD in .env}
+    ports:
+      - "8081:8081" # code-server (VS Code web UI, HTTP)
+    volumes:
+      - ./src:/workspace
+      - devbox-code-server:/root/.local/share/code-server
+    restart: always
+    # NVIDIA GPU reservation. Honored by `docker compose up` (Dokploy's Compose
+    # mode); Docker Swarm / Stack mode would ignore this and need generic-resources.
     deploy:
       resources:
         reservations:
@@ -21,3 +36,6 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+
+volumes:
+  devbox-code-server:
