@@ -1,0 +1,23 @@
+# Optional NVIDIA GPU support.
+#
+# This is a Compose *override* file: it adds nothing on its own and only takes
+# effect when layered on top of docker-compose.yml. The base file stays
+# CPU-only so `docker compose up` keeps working on hosts with no GPU.
+#
+# Requires the NVIDIA Container Toolkit on the host (and an NVIDIA driver):
+#   https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+#
+# Enable GPU access by layering this file in:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+#
+# The image already ships CUDA-enabled wheels (PyTorch cu128, cupy, etc.) on
+# amd64, so once the device is reserved here they can see the GPU.
+services:
+  devbox:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

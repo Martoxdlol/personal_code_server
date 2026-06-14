@@ -17,6 +17,7 @@ Based on the reference image:
 | -------------------- | -------------------------------------------------------------- |
 | `Dockerfile`         | Builds code-server + the polyglot toolchain                    |
 | `docker-compose.yml` | Runs the container, mounts `src/` as the workspace             |
+| `docker-compose.gpu.yml` | Optional override that grants the container the host NVIDIA GPU |
 | `.env.example`       | Template for the code-server password                          |
 | `src/`               | Your workspace files (`/workspace`)                            |
 
@@ -48,6 +49,32 @@ code-server is served over plain **HTTP** (no TLS).
 
 - Editor: <http://localhost:8081> — log in with `CODE_SERVER_PASSWORD`. It opens
   `/workspace` (the same `src/` folder), so edits show up immediately.
+
+## GPU (NVIDIA, optional)
+
+The image already ships CUDA-enabled wheels on amd64 (PyTorch `cu128`, `cupy`,
+`onnxruntime-gpu`, `bitsandbytes`), so the only missing piece is granting the
+container access to the host GPU at runtime. That lives in the separate
+`docker-compose.gpu.yml` override, so the default `docker compose up` stays
+CPU-only and works on hosts with no GPU.
+
+**Requirements (host):** an NVIDIA driver and the
+[NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+
+Start with the GPU exposed by layering the override file in:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build
+```
+
+Verify the GPU is visible from inside the container:
+
+```bash
+docker compose exec devbox python -c "import torch; print(torch.cuda.is_available())"
+```
+
+> CUDA wheels are only installed on **amd64** builds (see the `Dockerfile`).
+> On arm64 hosts the override has no useful effect.
 
 ## Flutter
 
